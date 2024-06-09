@@ -1,14 +1,18 @@
-from random import choice
+from random import choice, randint
 from pygame import *
 
 init()
 font.init()
 font1 = font.SysFont("Impact", 100)
+font2 = font.SysFont("Impact", 40)
+
 game_over_text = font1.render("GAME OVER", True, (150, 0, 0))
 mixer.init()
 mixer.music.load('space.ogg')
 # mixer.music.play()
 mixer.music.set_volume(0.2)
+bullet_sound = mixer.Sound("fire.ogg")
+bullet_sound.set_volume(0.5)
 screen_info = display.Info()
 WIDTH,HEIGHT = screen_info.current_w, screen_info.current_h
 
@@ -23,6 +27,8 @@ bg_y1= 0
 bg_y2= -HEIGHT
 
 player_img = image.load("spaceship.png")
+enemy_img = image.load("alien.png")
+bullet_img = image.load("lazer.png")
 
 all_sprites = sprite.Group()
 
@@ -39,11 +45,19 @@ class Sprite(sprite.Sprite):
 class Player(Sprite):
     def __init__(self, sprite_img, width, height, x, y):
         super().__init__(sprite_img, width, height, x, y)
-        self.hp = 100
+        self.hp = 1
+        self.score = 0
         self.speed = 2
         self.bg_speed = 2
-        self.max_speed = 3000
+        self.max_speed = 1000
 
+    def shoot (self):
+        new_bullet = Bullet(bullet_img,10,20,self.rect.left,self.rect.top )
+        new_bullet = Bullet(bullet_img,10,20,self.rect.right,self.rect.top )
+        new_bullet = Bullet(bullet_img,10,20,self.rect.centerx,self.rect.top )
+
+
+        bullet_sound.play()
     def update(self):
         key_pressed = key.get_pressed()
         old_pos = self.rect.x, self.rect.y
@@ -63,17 +77,50 @@ class Player(Sprite):
 
 
 class Enemy(Sprite):
+    def __init__(self, sprite_img, width, height,):
+        rand_x = randint(0, WIDTH-width)
+        super().__init__(sprite_img, width, height, rand_x, -200)
+        self.damage = 100
+        self.speed = 4
+        enemys.add(self)
+
+
+    def update(self):
+        self.rect.y += player.bg_speed +2
+
+        if self.rect.y > HEIGHT:
+            self.kill()
+
+bullets = sprite.Group()
+class Bullet(Sprite):
     def __init__(self, sprite_img, width, height, x, y):
         super().__init__(sprite_img, width, height, x, y)
+        self.rect.centerx = x
         self.damage = 100
-        self.speed = 2        
+        self.speed = 10
+        bullets.add(self)
+
+
+    def update(self):
+        self.rect.y -= self.speed
+        if self.rect.bottom < 0:
+            self.kill
+
+        
+
+
 
 
 player = Player(player_img, 100, 70, 300, 300)
 enemys = sprite.Group()
-
+enemy1 = Enemy(enemy_img, 80,60)
+score_text = font2.render(f"Score:{player.score}",True, (255,255,255))
+start_time = time.get_ticks()
+enemy_spawn_time = time.get_ticks()
+spawn_interval = randint(1000,5000)
 run = True
 finish = False
+
 while run:
     for e in event.get():
         if e.type == QUIT:
@@ -81,6 +128,8 @@ while run:
         if e.type == KEYDOWN:
             if e.key == K_ESCAPE:
                 run = False
+            if e.key == K_SPACE:
+                player.shoot()
 
     window.blit(bg,(0,bg_y1))
     window.blit(bg,(0,bg_y2))
@@ -90,16 +139,34 @@ while run:
         bg_y1 = -HEIGHT
     if bg_y2 > HEIGHT:
         bg_y2 = -HEIGHT
-    
-
 
     if player.hp <= 0:
         finish = True
 
+    now = time.get_ticks()
+    if now - enemy_spawn_time > spawn_interval:
+        enemy1 = Enemy(enemy_img, 80,60)
+        enemy_spawn_time = time.get_ticks()
+        spawn_interval = randint(100,500)
+    
+    bullets_collide = sprite.groupcollide(bullets,enemys,True,True,sprite.collide_mask)
+    for bullet in bullets_collide:
+        player.score += 10
+        score_text = font2.render(f"Score{player.score}",True, (255,255,255))
+
+
+    collide_list = sprite.spritecollide(player,enemys,True, sprite.collide_mask)
+    if len(collide_list) > 0:
+        finish = True
+
     all_sprites.draw(window)
+    window.blit(score_text,(30,30))
     if not finish:
         all_sprites.update()
     if finish:
-        window.blit(game_over_text, (300, 300))
+        window.blit(game_over_text,
+    (WIDTH/2 - game_over_text.get_width()/2,
+    HEIGHT/2 - game_over_text.get_height()/2))
+
     display.update()
     clock.tick(FPS)
