@@ -21,6 +21,8 @@ window = display.set_mode ((WIDTH,HEIGHT), flags = FULLSCREEN)
 FPS = 90
 clock = time.Clock()
 
+
+
 bg = image.load('infinite_starts.jpg')
 bg = transform.scale(bg,(WIDTH,HEIGHT))
 bg_y1= 0
@@ -45,7 +47,7 @@ class Sprite(sprite.Sprite):
 class Player(Sprite):
     def __init__(self, sprite_img, width, height, x, y):
         super().__init__(sprite_img, width, height, x, y)
-        self.hp = 1
+        self.hp = 2
         self.score = 0
         self.speed = 2
         self.bg_speed = 2
